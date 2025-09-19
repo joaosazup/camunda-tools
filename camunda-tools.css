@@ -59,7 +59,11 @@ label, h4{
 .item div{
     display: flex;
     flex-direction: row;
-    justify-content: space-between;
+    justify-content: start;
+}
+
+.item div input {
+    margin: 0 10px;
 }
 
 .move-button{

@@ -79,14 +79,10 @@ processGroupCheckbox.addEventListener("change", () => {
 });
 
 selectFirstActivityButton.addEventListener("click", () => {
-  selectElementOnPage("firstActivity");
+  selectElementOnPage("firstActivity", "secondActivity");
   window.close();
 });
 
-selectSecondActivityButton.addEventListener("click", () => {
-  selectElementOnPage("secondActivity");
-  window.close();
-});
 
 getSessionStorage("processInstance").then(async (result) => {
   processInstanceMoveInput.value =

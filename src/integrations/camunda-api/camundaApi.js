@@ -31,43 +31,34 @@ async function setUrlToSessionStorage() {
         return url;
       }
       return "";
-    }
+    },
   );
 }
 
 setUrlToSessionStorage();
 
-async function getBaseUrl() {
-  return (await getAsyncSessionStorage("url")).replace(/\/camunda\/app.*$/, "");
-}
+export async function getBaseUrl() {
+  const fullUrl = await getAsyncSessionStorage("url");
 
-export async function processInstanceModification(
-  processInstance,
-  modificationBody
-) {
-  let baseUrl = await getBaseUrl();
+  const match = fullUrl.match(/^(.*\.mobi\/)([^\/]+)/);
+  if (match) {
+    const base = match[1]; // até ".mobi/"
+    const camunda = match[2]; // valor variável após ".mobi/"
+    const mapper = {
+      comcommand: "/api/engine/engine/default",
+      clarocustom: "/engine-rest",
+    };
 
-  let fullUrl =
-    baseUrl +
-    "/engine-rest/process-instance/" +
-    processInstance +
-    "/modification";
-
-  console.log(fullUrl, modificationBody);
-
-  return fetch(fullUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(modificationBody),
-  });
+    const apiPath = mapper[camunda];
+    return `${base}${camunda}${apiPath}`;
+  }
+  return null;
 }
 
 export async function listProcessInstanceByActivityId(body) {
   let baseUrl = await getBaseUrl();
 
-  let fullUrl = baseUrl + "/engine-rest/process-instance";
+  let fullUrl = baseUrl + "/process-instance";
 
   console.log(fullUrl, body);
 
@@ -82,7 +73,7 @@ export async function listProcessInstanceByActivityId(body) {
 
 export async function getAllProcessInstanceByActivityAndProcessDefinition(
   processDefinition,
-  activityId
+  activityId,
 ) {
   console.log(processDefinition);
   console.log(activityId);
@@ -90,20 +81,14 @@ export async function getAllProcessInstanceByActivityAndProcessDefinition(
   if (!processDefinition) {
     throw new Error("Missing processDefinition parameter");
   }
-  if (
-    !activityId ||
-    activityId.length < 1 ||
-    !activityId?.[0] ||
-    activityId?.[0].length < 1
-  ) {
+  if ( !activityId || activityId.length < 1) {
     throw new Error("Missing activityId parameter");
   }
 
-  const body = JSON.parse(
-    await getAsyncSessionStorage("listProcessByActivity")
-  );
-  body.processDefinitionId = processDefinition;
-  body.activityIdIn = activityId;
+  const body = {
+    processDefinitionId: processDefinition,
+    activityIdIn: [activityId],
+  };
 
   console.log(body);
 
@@ -114,56 +99,3 @@ export async function getAllProcessInstanceByActivityAndProcessDefinition(
   }
 }
 
-export async function processInstanceMove(
-  processInstance,
-  cancel,
-  startBeforeActivity
-) {
-  return new Promise(async (resolve, reject) => {
-    console.log(processInstance);
-    console.log(cancel);
-    console.log(startBeforeActivity);
-
-    if (!processInstance) {
-      reject(new Error("Missing processInstance parameter"));
-      return;
-    }
-    if (
-      !cancel ||
-      cancel.length < 1 ||
-      !cancel?.[0] ||
-      cancel?.[0].length < 1
-    ) {
-      reject(new Error("Missing cancel parameter"));
-      return;
-    }
-    if (
-      !startBeforeActivity ||
-      startBeforeActivity.length < 1 ||
-      !startBeforeActivity?.[0] ||
-      startBeforeActivity?.[0].length < 1
-    ) {
-      reject(new Error("Missing startBeforeActivity parameter"));
-      return;
-    }
-
-    const body = JSON.parse(
-      await getAsyncSessionStorage("processInstanceModification")
-    );
-    const cancelBody = cancel.map((activityId) => {
-      return { type: "cancel", activityId: activityId };
-    });
-    const startBeforeActivityBody = startBeforeActivity.map((activityId) => {
-      return { type: "startBeforeActivity", activityId: activityId };
-    });
-    body.instructions = startBeforeActivityBody.concat(cancelBody);
-
-    console.log(body);
-    try {
-      const result = await processInstanceModification(processInstance, body);
-      resolve(result);
-    } catch (error) {
-      reject(error);
-    }
-  });
-}

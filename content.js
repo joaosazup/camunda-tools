@@ -1,6 +1,6 @@
 import {
   getAllProcessInstanceByActivityAndProcessDefinition,
-  processInstanceMove
+  getBaseUrl,
 } from "./src/integrations/camunda-api/camundaApi.js";
 import { createNotification } from "./src/integrations/camunda-cockpit/cockpitInjections.js";
 import {
@@ -15,7 +15,7 @@ import {
 } from "./src/integrations/tab/pageActions.js";
 import {
   getProcessDefinitionFromUrl,
-  getProcessInstanceFromUrl
+  getProcessInstanceFromUrl,
 } from "./src/script/util.js";
 
 let screens = {
@@ -31,12 +31,11 @@ function showCurrentScreen(screen) {
 
 getSessionStorage("screenState").then((result) => showCurrentScreen(result));
 
-let processInstanceMoveInput = document.getElementById("processInstanceMoveInput");
-let processDefinitionMoveInput = document.getElementById("processDefinitionMoveInput");
+let processInstanceMoveInput = document.getElementById( "processInstanceMoveInput");
+let processDefinitionMoveInput = document.getElementById( "processDefinitionMoveInput");
 let firstActivityMoveInput = document.getElementById("firstActivityMoveInput");
-let secondActivityMoveInput = document.getElementById("secondActivityMoveInput");
-let selectFirstActivityButton = document.getElementById("selectFirstActivityButton");
-let selectSecondActivityButton = document.getElementById("selectSecondActivityButton");
+let secondActivityMoveInput = document.getElementById( "secondActivityMoveInput");
+let selectFirstActivityButton = document.getElementById( "selectFirstActivityButton");
 let processGroupCheckbox = document.getElementById("processGroupCheckbox");
 let mainToMoveButton = document.getElementById("mainToMoveButton");
 let moveToMainButton = document.getElementById("moveToMainButton");
@@ -54,15 +53,15 @@ function isMultipleProcessSelected() {
 
 function showCurrentProcessGroup() {
   Array.from(Object.values(processGroup)).forEach((item) =>
-    Array.from(item).forEach((el) => el.classList.add("hidden"))
+    Array.from(item).forEach((el) => el.classList.add("hidden")),
   );
   if (isMultipleProcessSelected()) {
     Array.from(processGroup.definitionGroup).forEach((el) =>
-      el.classList.remove("hidden")
+      el.classList.remove("hidden"),
     );
   } else {
     Array.from(processGroup.instanceGroup).forEach((el) =>
-      el.classList.remove("hidden")
+      el.classList.remove("hidden"),
     );
   }
 }
@@ -82,7 +81,6 @@ selectFirstActivityButton.addEventListener("click", () => {
   selectElementOnPage("firstActivity", "secondActivity");
   window.close();
 });
-
 
 getSessionStorage("processInstance").then(async (result) => {
   processInstanceMoveInput.value =
@@ -143,7 +141,6 @@ moveToMainButton.addEventListener("click", () => {
 });
 
 executeMove.addEventListener("click", async () => {
-
   executeMove.disabled = true;
 
   const processInstance = await getAsyncSessionStorage("processInstance");
@@ -155,29 +152,27 @@ executeMove.addEventListener("click", async () => {
   console.log(startBeforeActivity);
 
   try {
-    const response = await moveProcessInstance(processInstance, [cancel], [startBeforeActivity])
+    const response = await moveProcessInstance(
+      processInstance,
+      cancel,
+      startBeforeActivity,
+    );
+    console.log({ response });
 
-      console.log('result', response);
-      if (response.status === 'success'){
-        handleProcessMovedSuccess();
+    if (response.status === "success") {
+      handleProcessMovedSuccess();
 
-        setSessionStorage({firstActivity: ""});
-        firstActivityMoveInput.value = "";
-        setSessionStorage({secondActivity: ""});
-        secondActivityMoveInput.value = "";
+      reloadCurrentTab();
+    } else {
+      const message = response.result.message;
 
-        reloadCurrentTab();
+      if (message.includes("Missing")) {
+        handleMissingFieldsError(message);
       } else {
-
-        const message = response.result.message;
-
-        if (message.includes("Missing")) {
-          handleMissingFieldsError(message);
-        } else {
-          handleExecutionError(message);
-        }
+        handleExecutionError(message);
       }
-  } catch (error){
+    }
+  } catch (error) {
     console.error(error);
   } finally {
     executeMove.disabled = false;
@@ -185,7 +180,6 @@ executeMove.addEventListener("click", async () => {
 });
 
 executeMoveAllProcess.addEventListener("click", async () => {
- 
   executeMoveAllProcess.disabled = true;
 
   const processDefinition = await getAsyncSessionStorage("processDefinition");
@@ -198,40 +192,45 @@ executeMoveAllProcess.addEventListener("click", async () => {
 
   const summary = {
     errors: [],
-    success: []
+    success: [],
   };
 
   try {
     const response = await getAllProcessInstanceByActivityAndProcessDefinition(
       processDefinition,
-      [cancel]
+      cancel,
     );
     if (response.ok) {
       const processInstanceArray = await response.json();
       console.log(processInstanceArray);
 
-      if(processInstanceArray.length === 0){
-        throw new Error(`No process instances found in this activity (${cancel}) and process definition (${processDefinition})`);
+      if (processInstanceArray.length === 0) {
+        throw new Error(
+          `No process instances found in this activity (${cancel}) and process definition (${processDefinition})`,
+        );
       }
       let i = 0;
       const movePromises = processInstanceArray.map(async (processInstance) => {
         const response = await moveProcessInstance(
-          processInstance.id, 
-          [cancel], 
-          [startBeforeActivity]
+          processInstance.id,
+          cancel,
+          startBeforeActivity,
         );
-        if (response.status === 'success'){
+        if (response.status === "success") {
           summary.success.push(processInstance.id);
         } else {
-          summary.errors.push({ id: processInstance.id, message: response.result });
+          summary.errors.push({
+            id: processInstance.id,
+            message: response.result,
+          });
         }
       });
 
       await Promise.all(movePromises);
 
-      return 'success';
+      return "success";
     } else {
-      throw new Error(response.json().message)
+      throw new Error(response.json().message);
     }
   } catch (error) {
     const message = error.message;
@@ -242,50 +241,84 @@ executeMoveAllProcess.addEventListener("click", async () => {
       handleExecutionError(message);
     }
 
-    return 'error';
-    
+    return "error";
   } finally {
-    setSessionStorage({firstActivity: ""});
-    firstActivityMoveInput.value = "";
-    setSessionStorage({secondActivity: ""});
-    secondActivityMoveInput.value = "";
-
     if (summary.success.length > 0) {
-      handleProcessMovedSuccess(`Success: ${summary.success.length} instance(s) moved successfully.`);
-      console.log(`Success: ${summary.success.length} instance(s) moved successfully.`);
+      handleProcessMovedSuccess(
+        `Success: ${summary.success.length} instance(s) moved successfully.`,
+      );
+      console.log(
+        `Success: ${summary.success.length} instance(s) moved successfully.`,
+      );
     }
 
     if (summary.errors.length > 0) {
-      handleExecutionError(`Error: ${summary.errors.length} instance(s) failed to move.`);
-      console.error(`Error: ${summary.errors.length} instance(s) failed to move. Details: ${summary.errors}`);
+      handleExecutionError(
+        `Error: ${summary.errors.length} instance(s) failed to move.`,
+      );
+      console.error(
+        `Error: ${summary.errors.length} instance(s) failed to move. Details: ${summary.errors}`,
+      );
     }
     executeMoveAllProcess.disabled = false;
   }
 });
 
-async function moveProcessInstance(processInstance, cancel, startBeforeActivity) {
-  try {
-    const response = await processInstanceMove(processInstance, cancel, startBeforeActivity);
+async function getCurrentTabId() {
+  const [active] = await chrome.tabs.query({
+    active: true,
+    currentWindow: true,
+  });
+  if (!active?.id) {
+    throw new Error("Tab not found");
+  }
+  return active.id;
+}
 
-    if (response.ok) {
-      return {
-        status: 'success',
-        result: response.status
-      };
-    } else {
-      const message = await response.json().then((json) => {
-        return json.message;
-      });
-      throw new Error(message);
+async function moveProcessInstance(
+  processInstanceId,
+  cancel,
+  startBeforeActivity,
+) {
+  try {
+    console.log(processInstanceId);
+    console.log(cancel);
+    console.log(startBeforeActivity);
+
+    if (!processInstanceId) {
+      throw new Error("Missing processInstance parameter");
     }
+    if (!cancel || cancel.length < 1) {
+      throw new Error("Missing cancel parameter");
+    }
+    if (!startBeforeActivity || startBeforeActivity.length < 1) {
+      throw new Error("Missing startBeforeActivity parameter");
+    }
+
+    const body = {
+      skipCustomListeners: true,
+      skipIoMappings: true,
+      instructions: [
+        { type: "startBeforeActivity", activityId: startBeforeActivity },
+        { type: "cancel", activityId: cancel },
+      ],
+    };
+
+    let baseUrl = await getBaseUrl();
+
+    let fullUrl = `${baseUrl}/process-instance/${processInstanceId}/modification`;
+
+    console.log(fullUrl, body);
+    const tabId = await getCurrentTabId();
+
+    return chrome.tabs.sendMessage(tabId, { name: "skip", body, url: fullUrl });
   } catch (error) {
     return {
-      status: 'error',
-      result: error
+      status: "error",
+      result: error,
     };
   }
 }
-
 
 function handleProcessMovedSuccess(message) {
   console.log("Process Instance Moved:", message);
@@ -295,8 +328,8 @@ function handleProcessMovedSuccess(message) {
         status: "Process Instance Moved:",
         message: message || "A process instance was successfully moved.",
       },
-      "success"
-    )
+      "success",
+    ),
   );
 }
 
@@ -308,8 +341,8 @@ function handleMissingFieldsError(message) {
         status: "Missing fields:",
         message: message || "Some fields are missing",
       },
-      "warning"
-    )
+      "warning",
+    ),
   );
 }
 
@@ -321,8 +354,8 @@ function handleExecutionError(message) {
         status: "Execution error:",
         message: message || "Some error happened",
       },
-      "error"
-    )
+      "error",
+    ),
   );
 }
 
@@ -334,7 +367,7 @@ function handleOtherErrors(error) {
         status: "Error:",
         message: error.message,
       },
-      "warning"
-    )
+      "warning",
+    ),
   );
 }

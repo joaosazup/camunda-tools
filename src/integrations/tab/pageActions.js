@@ -113,6 +113,10 @@ function handleElementSelection(keys) {
   function elementFilter(event) {
     let selectedElement = getGroupElement(event.target).getElementsByTagName("g")[0]
 
+    if (selectedElement.hasAttribute('isEndEvent')) {
+      alert('Não faça skip para o EndEvent.');
+      return null;
+    }
     if (
       !selectedElement.classList.contains("djs-element") ||
       !selectedElement.classList.contains("djs-shape")

@@ -250,6 +250,11 @@
           svgElem.addEventListener('mouseenter', function (evt) { addGlow(svgElem); showTooltip(infoText, evt); });
           svgElem.addEventListener('mousemove', function (evt) { positionTooltip(evt); });
           svgElem.addEventListener('mouseleave', function () { removeGlow(svgElem); hideTooltip(); });
+          
+          if (options.isEndEvent) {
+            svgElem.setAttribute('isEndEvent', true);
+          }
+          
           svgElem._hasTooltipListeners = true;
         }
         // Delegate/class copy no dblclick
@@ -610,7 +615,7 @@
             });
             let info = `${doc}\n[${label}]${name ? ' ' + name : ''}\nID: ${id}`;
             if (extra) info += `\n${extra.trim()}`;
-            annotateDiagram(id, info);
+            annotateDiagram(id, info, { isEndEvent: tag === 'endEvent' });
           });
         });
 

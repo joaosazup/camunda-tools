@@ -83,6 +83,10 @@ git clone git@github.com:jontaspeixoto/camunda-tools.git
 
 3. Siga as instruções na interface para executar as ações desejadas.
 
+## Gerar ZIP para flex-helper
+
+comando: `zip -r camunda-tools.zip . -x ".git/*" "node_modules/*"`
+
 ## Contribuições
 
 Contribuições são bem-vindas! Sinta-se à vontade para abrir problemas (issues) e enviar pull requests.

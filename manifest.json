@@ -3,7 +3,7 @@
     "name": "Camunda Tools",
     "permissions": ["activeTab", "scripting", "storage"],
     "description": "Enable extended tools for camunda cockpit.",
-    "version": "1.1.4",
+    "version": "1.1.5",
     "icons": {
         "16": "./images/icon-16.png",
         "32": "./images/icon-32.png",
